@@ -10,7 +10,9 @@ struct process{
     int ioDuration;
 };
 
-void parseInput(){
+int numberOfRows;
+
+void parseInput(struct process processes[]){
   FILE *fp;
   int data, row, col, c, count, inc;
   int *array, capacity = 10;
@@ -45,35 +47,56 @@ void parseInput(){
           goto exit;
       }
   }
-  {   //check print
+  { //Print results and create an array of processes
       int i,j;
       //int (*matrix)[col]=array;
       int numberStruct;
       //Testing the output of parseInput
       for(i=0;i<row;++i){
-          for(j=0;j<col;++j)
+          for(j=0;j<col;++j){
               printf("%d ", array[i*col + j]);//matrix[i][j]
+          }
               numberStruct++;
               printf("\n");
       }
 
-      struct process processes[numberStruct];
+
 
       int temp[5], x;
       for(int y = 0; y < sizeof(array); y+=5){
         for(int z = 0; z < 5; z++){
           temp[z] = array[z+y];
         }
-        processes[x] = {temp[0],temp[1],temp[2],temp[3],temp[4]};
+        processes[x].pid = temp[0];
+        processes[x].arrivalTime = temp[1];
+        processes[x].totalCPUTime = temp[2];
+        processes[x].ioFrequency = temp[3];
+        processes[x].ioDuration = temp[4];
         x++;
       }
+      numberOfRows = x-1;
   }
+
 exit:
   fclose(fp);
   free(array);
+
+}
+
+void printProcesses(struct process processesCopy[]){
+  for(int i = 0; i < numberOfRows; i++){
+    printf("PID: %d \n", processesCopy[i].pid);
+    printf("Arrival Time:: %d \n", processesCopy[i].arrivalTime);
+    printf("Total CPU Time: %d \n", processesCopy[i].totalCPUTime);
+    printf("I/O Frequency: %d \n", processesCopy[i].ioFrequency);
+    printf("I/O Duration: %d \n \n", processesCopy[i].ioDuration);
+  }
 }
 
 int main(){
-  parseInput();
+
+  struct process inputProcesses[10];
+  parseInput(inputProcesses);
+  printProcesses(inputProcesses);
   return 0;
 }
