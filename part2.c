@@ -63,7 +63,7 @@ void parseInput(struct process processes[]){
 
 
       int temp[5], x;
-      for(int y = 0; y < sizeof(array); y+=5){
+      for(unsigned int y = 0; y < sizeof(array); y+=5){
         for(int z = 0; z < 5; z++){
           temp[z] = array[z+y];
         }
@@ -74,7 +74,7 @@ void parseInput(struct process processes[]){
         processes[x].ioDuration = temp[4];
         x++;
       }
-      numberOfRows = x-1;
+      numberOfRows = x;
   }
 
 exit:
@@ -95,7 +95,7 @@ void printProcesses(struct process processesCopy[]){
 
 int main(){
 
-  struct process inputProcesses[10];
+  struct process inputProcesses[10]; //MAX NUMBER OF INPUT PROCESSES = 10
   parseInput(inputProcesses);
   printProcesses(inputProcesses);
   return 0;
