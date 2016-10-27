@@ -19,6 +19,10 @@ int readySize;
 int runningSize;
 int waitingSize;
 
+char readyString[] = "Ready";
+char runningString[] = "Running";
+char waitingString[] = "Waiting";
+
 void parseInput(struct process processes[]){
   FILE *fp;
   int data, row, col, c, count, inc;
@@ -102,7 +106,11 @@ void printProcesses(struct process processesCopy[], int size){
   }
 }
 
-/* Appends a process to a process queue */
+/*  Appends a process to a process queue
+    queueInsert template:
+    queueInsert(readyQueue, inputProcesses[0],&rearReady,&frontReady, &readySize);
+
+*/
 void queueInsert(struct process queue[], struct process processAdd, int *rearA, int *frontA, int *size){
   int rear = *rearA;
   int front = *frontA;
@@ -122,7 +130,11 @@ void queueInsert(struct process queue[], struct process processAdd, int *rearA, 
 }
 
 
-/* Deletes the first elemeent in a precess queue */
+/*  Deletes the first elemeent in a precess queue
+    queueDelete template:
+    queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
+
+*/
 void queueDelete(struct process queue[], int *rearA, int *frontA, int *size){
   int rear = *rearA;
   int front = *frontA;
@@ -139,12 +151,22 @@ void queueDelete(struct process queue[], int *rearA, int *frontA, int *size){
   }
 }
 
+/*
+  prints to output.txt
+  printOutput template:
+  printOutput(outputFile, 3, inputProcesses[1], readyString, runningString);
+*/
+void printOutput(FILE *output, int time, struct process someProcess, char oldState[], char newState[]){
+    fprintf(output, "| %d | %d   |  %s   | %s   | \n", time, someProcess.pid, oldState, newState );
+}
+
 
 
 int main(){
   //parses input.txt
   struct process inputProcesses[MAX_PROCESSES]; //MAX NUMBER OF INPUT PROCESSES = 10
   parseInput(inputProcesses);
+  //print parsed input info
   printProcesses(inputProcesses, inputSize);
 
 
@@ -159,24 +181,28 @@ int main(){
   int rearWaiting = -1;
   int frontWaiting = -1;
 
+  /*Testing queue functionality
   queueInsert(readyQueue, inputProcesses[0],&rearReady,&frontReady, &readySize);
   queueInsert(readyQueue, inputProcesses[1],&rearReady,&frontReady, &readySize);
   printProcesses(readyQueue,readySize);
   queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
   printProcesses(readyQueue,readySize);
+  */
 
 
-  /*
 
   //Setting up ouput to file
   FILE *outputFile;
   outputFile = fopen("output.txt", "w");
   fprintf(outputFile, "| Time of transition | PID   | Old State   | New State   | \n");
-  fprintf(outputFile, "Starting PID: %d \n", inputProcesses[0].pid);
+
+  /*
+    Insert primary logic here
+  */
 
   clock_t uptime = clock() / (CLOCKS_PER_SEC / 1000);
 
-  */
 
+  fclose(outputFile);
   return 0;
 }
