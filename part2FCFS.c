@@ -183,7 +183,6 @@ int main(){
   //Setting up state queues
   struct process readyQueue[MAX_PROCESSES];
   struct process running;
-  struct process waitingQueue[MAX_PROCESSES];
   struct process endQueue[MAX_PROCESSES];
   struct process invalidRunning;
   invalidRunning.pid = -1;
@@ -206,7 +205,6 @@ int main(){
 
   int timerIO = 0;
   int timerIOWait[inputSize];
-  int ioWaitTracker = 0;
   int  skipRead = 0;
 
 
@@ -254,41 +252,6 @@ int main(){
           queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
       }
     }
-
-
-
-    //Check for I/O
-    if(running.ioFrequency == 0){
-      //NO IO
-    }
-    else if (running.ioFrequency == timerIO){
-      //Transfer the process from the running queue to waiting if IO is procd
-      queueInsert(waitingQueue, running, &rearWaiting, &frontWaiting, &waitingSize);
-      printOutput(outputFile, time, running, runningString, waitingString);
-      running = invalidRunning;
-      //Set a unique ID for IO tracking
-      timerIOWait[ioWaitTracker] = 0;
-      waitingQueue[rearWaiting].ioTrackerID = ioWaitTracker;
-      ioWaitTracker++;
-      timerIO = 0;
-    }
-
-    //Iterate over all waiting processes
-    for (int i = frontWaiting; frontWaiting < rearWaiting;i++) {
-      //Check a process's IO is over
-      if(waitingQueue[i].ioDuration == timerIOWait[waitingQueue[i].ioTrackerID]){
-        //Transfer the process from the waiting queue to ready queue if IO is done
-        queueInsert(readyQueue, waitingQueue[i], &rearReady, &frontReady, &readySize);
-        printOutput(outputFile, time, waitingQueue[i], waitingString, readyString);
-        queueDelete(waitingQueue, &rearWaiting, &frontWaiting, &waitingSize);
-
-        timerIOWait[i] = 0;
-      }
-    }
-
-
-
-
 
     //Increment times
     running.timeRan++;
