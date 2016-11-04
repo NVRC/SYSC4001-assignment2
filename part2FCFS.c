@@ -3,16 +3,19 @@
 #include <string.h>
 #include <time.h>
 
-#define MAX_PROCESSES 20
+#define MAX_PROCESSES 100
 
 
 struct process{
     int pid;
-    int arrivalTime;
+    long unsigned int arrivalTime;
     int totalCPUTime;
     int ioFrequency;
     int ioDuration;
+    int timeRan;
+    int ioTrackerID;
 };
+
 
 int inputSize;
 int readySize;
@@ -22,6 +25,7 @@ int waitingSize;
 char readyString[] = "Ready";
 char runningString[] = "Running";
 char waitingString[] = "Waiting";
+char inputString[] = "New";
 
 void parseInput(struct process processes[]){
   FILE *fp;
@@ -99,12 +103,13 @@ void printProcesses(struct process processesCopy[], int size, int front){
   printf(".........PRINTING NEW PROCESS ARRAY.......... \n");
   for(int i = front; i < size; i++){
     printf("PID: %d \n", processesCopy[i].pid);
-    printf("Arrival Time:: %d \n", processesCopy[i].arrivalTime);
+    printf("Arrival Time:: %lu \n", processesCopy[i].arrivalTime);
     printf("Total CPU Time: %d \n", processesCopy[i].totalCPUTime);
     printf("I/O Frequency: %d \n", processesCopy[i].ioFrequency);
     printf("I/O Duration: %d \n \n", processesCopy[i].ioDuration);
   }
 }
+
 /*  Appends a process to a process queue
     queueInsert template:
     queueInsert(readyQueue, inputProcesses[0],&rearReady,&frontReady, &readySize);
@@ -121,9 +126,7 @@ void queueInsert(struct process queue[], struct process processAdd, int *rearA, 
       //If queue is initially empty
       *frontA = 0;
     }
-    if(rear == -1){
-      *rearA = 0;
-    }
+
     (*rearA)++;
     rear++;
     (*size)++;
@@ -153,9 +156,9 @@ void queueDelete(struct process queue[], int *rearA, int *frontA, int *size){
   printOutput template:
   printOutput(outputFile, 3, inputProcesses[1], readyString, runningString);
 */
-void printOutput(FILE *output, int time, struct process someProcess, char oldState[], char newState[]){
-    printf("Printing values to output.txt\n");
-    fprintf(output, "|  %d   |  %d   |  %s   |  %s  | \n", time, someProcess.pid, oldState, newState );
+void printOutput(FILE *output, long unsigned int time, struct process someProcess, char oldState[], char newState[]){
+    printf("|  %lu   |  %d   |  %s   |  %s  | \n", time, someProcess.pid, oldState, newState );
+    fprintf(output, "|  %lu   |  %d   |  %s   |  %s  | \n", time, someProcess.pid, oldState, newState );
 }
 
 
@@ -180,41 +183,105 @@ int main(){
   int frontWaiting = -1;
 
 
-  queueInsert(readyQueue, inputProcesses[0],&rearReady,&frontReady, &readySize);
-  queueInsert(readyQueue, inputProcesses[1],&rearReady,&frontReady, &readySize);
-  printProcesses(readyQueue,readySize, frontReady);
-  printf("FRONT READY: %d\n",frontReady );
-  printf("SIZE READY %d\n", readySize );
-  queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
-  printf("FRONT READY: %d\n",frontReady );
-  printf("SIZE READY %d\n", readySize );
-  printProcesses(readyQueue,readySize, frontReady);
-  queueInsert(readyQueue, inputProcesses[2],&rearReady,&frontReady, &readySize);
-  queueInsert(readyQueue, inputProcesses[3],&rearReady,&frontReady, &readySize);
-  printProcesses(readyQueue,readySize, frontReady);
+  long unsigned int time = 0;
 
-  queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
+  int modInputSize = inputSize;
 
-  queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
-  printProcesses(readyQueue,readySize, frontReady);
-  queueInsert(readyQueue, inputProcesses[0],&rearReady,&frontReady, &readySize);
-  queueInsert(readyQueue, inputProcesses[1],&rearReady,&frontReady, &readySize);
-  printProcesses(readyQueue,readySize, frontReady);
-
+  int timerIO = 0;
+  int timerIOWait[inputSize];
+  int ioWaitTracker = 0;
+  int  skipRead = 0;
+  int flag = 0;
 
   //Setting up ouput to file
   FILE *outputFile;
   outputFile = fopen("output.txt", "w");
   fprintf(outputFile, "| Time of transition | PID   | Old State   | New State   | \n");
-  printOutput(outputFile, 3, inputProcesses[2], readyString, waitingString);
-  printOutput(outputFile, 5, inputProcesses[0], readyString, waitingString);
-  printOutput(outputFile, 6, inputProcesses[1], readyString, waitingString);
-  printOutput(outputFile, 7, inputProcesses[4], readyString, waitingString);
+  printf("| Time of transition | PID   | Old State   | New State   | \n");
   /*
     Insert primary logic here
   */
 
-  clock_t uptime = clock() / (CLOCKS_PER_SEC / 1000);
+  while(modInputSize > 0){
+    for (int i = skipRead; i < inputSize; i++) {
+      if(inputProcesses[i].arrivalTime == time){
+        //if the processes arrivalTime has been reached add to it to the ready queue
+
+        queueInsert(readyQueue, inputProcesses[i], &rearReady, &frontReady, &readySize);
+        printOutput(outputFile, time, inputProcesses[i], inputString, readyString);
+
+        skipRead++;
+      }
+    }
+
+
+    if(abs(rearRunning - frontRunning) == 0){ //Check if there isn't a process running
+
+      if(abs(rearReady - frontReady) > 0){ //Check if a process is in the Ready Queue
+
+        queueInsert(runningQueue, readyQueue[frontReady],&rearRunning, &frontRunning, &runningSize);
+        printOutput(outputFile, time, readyQueue[frontReady], readyString, runningString);
+        //Remove the process from the ready Queue
+        queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
+      }
+    } else {    //Check if running process is done
+
+      if(runningQueue[frontRunning].totalCPUTime == runningQueue[frontRunning].timeRan){
+        //Remove process from runningQueue
+        queueDelete(runningQueue, &rearRunning, &frontRunning, &runningSize);
+
+
+        modInputSize--;
+      }
+    }
+
+
+
+    //Check for I/O
+    if(runningQueue[frontRunning].ioFrequency == 0){
+      //NO IO
+    }
+    else if (runningQueue[frontRunning].ioFrequency == timerIO){
+      //Transfer the process from the running queue to waiting if IO is procd
+      queueInsert(waitingQueue, runningQueue[frontRunning], &rearWaiting, &frontWaiting, &waitingSize);
+      printOutput(outputFile, time, runningQueue[frontReady], runningString, waitingString);
+      queueDelete(runningQueue, &rearRunning, &frontRunning, &runningSize);
+      //Set a unique ID for IO tracking
+      timerIOWait[ioWaitTracker] = 0;
+      waitingQueue[rearWaiting].ioTrackerID = ioWaitTracker;
+      ioWaitTracker++;
+      timerIO = 0;
+    }
+
+    //Iterate over all waiting processes
+    for (int i = frontWaiting; frontWaiting < rearWaiting;i++) {
+      //Check a process's IO is over
+      if(waitingQueue[i].ioDuration == timerIOWait[waitingQueue[i].ioTrackerID]){
+        //Transfer the process from the waiting queue to ready queue if IO is done
+        queueInsert(readyQueue, waitingQueue[i], &rearReady, &frontReady, &readySize);
+        printOutput(outputFile, time, waitingQueue[i], waitingString, readyString);
+        queueDelete(waitingQueue, &rearWaiting, &frontWaiting, &waitingSize);
+
+        timerIOWait[i] = 0;
+      }
+    }
+
+
+
+
+
+    //Increment times
+    runningQueue[frontRunning].timeRan++;
+    //printf("PID : %d  TIME RAN:%d\n",runningQueue[frontRunning].pid, runningQueue[frontRunning].timeRan);
+    time++;
+        timerIO++;
+    //Increment all IO timers
+    for (int i = 0; frontWaiting < rearWaiting;i++) {
+      timerIOWait[i]++;
+    }
+  }
+
+
 
 
 

@@ -1,2 +1,0 @@
-| Time of transition | PID   | Old State   | New State   | 
-| 3 | 2   |  Ready   | Running   | 
