@@ -21,11 +21,13 @@ int inputSize;
 int readySize;
 int runningSize;
 int waitingSize;
+int endSize;
 
 char readyString[] = "Ready";
 char runningString[] = "Running";
 char waitingString[] = "Waiting";
 char inputString[] = "New";
+char endString[] = "End";
 
 void parseInput(struct process processes[]){
   FILE *fp;
@@ -126,7 +128,6 @@ void queueInsert(struct process queue[], struct process processAdd, int *rearA, 
       //If queue is initially empty
       *frontA = 0;
     }
-
     (*rearA)++;
     rear++;
     (*size)++;
@@ -175,12 +176,16 @@ int main(){
   struct process readyQueue[MAX_PROCESSES];
   struct process runningQueue[MAX_PROCESSES];
   struct process waitingQueue[MAX_PROCESSES];
+  struct process endQueue[MAX_PROCESSES];
   int rearReady = -1;
   int frontReady = -1;
   int rearRunning = -1;
   int frontRunning = -1;
   int rearWaiting = -1;
   int frontWaiting = -1;
+  int rearEnd = -1;
+  int frontEnd = -1;
+
 
 
   long unsigned int time = 0;
@@ -192,6 +197,7 @@ int main(){
   int ioWaitTracker = 0;
   int  skipRead = 0;
   int flag = 0;
+
 
   //Setting up ouput to file
   FILE *outputFile;
@@ -228,6 +234,8 @@ int main(){
 
       if(runningQueue[frontRunning].totalCPUTime == runningQueue[frontRunning].timeRan){
         //Remove process from runningQueue
+        queueInsert(endQueue, runningQueue[frontRunning], &rearEnd, &frontEnd, &endSize);
+        printOutput(outputFile, time, runningQueue[frontRunning], runningString, endString);
         queueDelete(runningQueue, &rearRunning, &frontRunning, &runningSize);
 
 
