@@ -191,20 +191,12 @@ int main(){
 
   int rearReady = -1;
   int frontReady = -1;
-
-  int rearWaiting = -1;
-  int frontWaiting = -1;
   int rearEnd = -1;
   int frontEnd = -1;
-
-
 
   long unsigned int time = 0;
 
   int modInputSize = inputSize;
-
-  int timerIO = 0;
-  int timerIOWait[inputSize];
   int  skipRead = 0;
 
 
@@ -257,11 +249,6 @@ int main(){
     running.timeRan++;
     //printf("PID : %d  TIME RAN:%d\n",runningQueue[frontRunning].pid, runningQueue[frontRunning].timeRan);
     time++;
-        timerIO++;
-    //Increment all IO timers
-    for (int i = 0; frontWaiting < rearWaiting;i++) {
-      timerIOWait[i]++;
-    }
   }
 
 
