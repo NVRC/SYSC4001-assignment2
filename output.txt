@@ -1,0 +1,16 @@
+| Time of transition | PID   | Old State   | New State   | 
+|  0   |  1   |  New   |  Ready  | 
+|  0   |  1   |  Ready   |  Running  | 
+|  9   |  2   |  New   |  Ready  | 
+|  12   |  3   |  New   |  Ready  | 
+|  13   |  4   |  New   |  Ready  | 
+|  17   |  5   |  New   |  Ready  | 
+|  22   |  1   |  Running   |  End  | 
+|  22   |  2   |  Ready   |  Running  | 
+|  33   |  2   |  Running   |  End  | 
+|  33   |  3   |  Ready   |  Running  | 
+|  45   |  3   |  Running   |  End  | 
+|  45   |  4   |  Ready   |  Running  | 
+|  56   |  4   |  Running   |  End  | 
+|  56   |  5   |  Ready   |  Running  | 
+|  70   |  5   |  Running   |  End  | 

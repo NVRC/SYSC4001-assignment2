@@ -112,6 +112,14 @@ void printProcesses(struct process processesCopy[], int size, int front){
   }
 }
 
+void printProcess(struct process process){
+  printf("PID: %d \n", process.pid);
+  printf("Arrival Time:: %lu \n", process.arrivalTime);
+  printf("Total CPU Time: %d \n", process.totalCPUTime);
+  printf("I/O Frequency: %d \n", process.ioFrequency);
+  printf("I/O Duration: %d \n \n", process.ioDuration);
+}
+
 /*  Appends a process to a process queue
     queueInsert template:
     queueInsert(readyQueue, inputProcesses[0],&rearReady,&frontReady, &readySize);
@@ -174,13 +182,17 @@ int main(){
 
   //Setting up state queues
   struct process readyQueue[MAX_PROCESSES];
-  struct process runningQueue[MAX_PROCESSES];
+  struct process running;
   struct process waitingQueue[MAX_PROCESSES];
   struct process endQueue[MAX_PROCESSES];
+  struct process invalidRunning;
+  invalidRunning.pid = -1;
+  invalidRunning.totalCPUTime = 1000;
+  running = invalidRunning;
+
   int rearReady = -1;
   int frontReady = -1;
-  int rearRunning = -1;
-  int frontRunning = -1;
+
   int rearWaiting = -1;
   int frontWaiting = -1;
   int rearEnd = -1;
@@ -196,7 +208,7 @@ int main(){
   int timerIOWait[inputSize];
   int ioWaitTracker = 0;
   int  skipRead = 0;
-  int flag = 0;
+
 
 
   //Setting up ouput to file
@@ -216,44 +228,44 @@ int main(){
         queueInsert(readyQueue, inputProcesses[i], &rearReady, &frontReady, &readySize);
         printOutput(outputFile, time, inputProcesses[i], inputString, readyString);
 
+
         skipRead++;
       }
     }
 
-
-    if(abs(rearRunning - frontRunning) == 0){ //Check if there isn't a process running
-
-      if(abs(rearReady - frontReady) > 0){ //Check if a process is in the Ready Queue
-
-        queueInsert(runningQueue, readyQueue[frontReady],&rearRunning, &frontRunning, &runningSize);
-        printOutput(outputFile, time, readyQueue[frontReady], readyString, runningString);
-        //Remove the process from the ready Queue
-        queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
-      }
-    } else {    //Check if running process is done
-
-      if(runningQueue[frontRunning].totalCPUTime == runningQueue[frontRunning].timeRan){
-        //Remove process from runningQueue
-        queueInsert(endQueue, runningQueue[frontRunning], &rearEnd, &frontEnd, &endSize);
-        printOutput(outputFile, time, runningQueue[frontRunning], runningString, endString);
-        queueDelete(runningQueue, &rearRunning, &frontRunning, &runningSize);
+    if(running.totalCPUTime == running.timeRan){
+      //Remove process from running
+      queueInsert(endQueue, running, &rearEnd, &frontEnd, &endSize);
+      printOutput(outputFile, time, running, runningString, endString);
+      running = invalidRunning;
 
 
-        modInputSize--;
+      modInputSize--;
+      if(modInputSize == 0){ goto end;}
+    }
+
+    if(running.pid < 0){ //Check if there isn't a process running
+
+      if(abs(rearReady - frontReady) >= 0){ //Check if a process is in the Ready Queue
+
+          running = readyQueue[frontReady];
+          printOutput(outputFile, time, running, readyString, runningString);
+          //Remove the process from the ready Queue
+          queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
       }
     }
 
 
 
     //Check for I/O
-    if(runningQueue[frontRunning].ioFrequency == 0){
+    if(running.ioFrequency == 0){
       //NO IO
     }
-    else if (runningQueue[frontRunning].ioFrequency == timerIO){
+    else if (running.ioFrequency == timerIO){
       //Transfer the process from the running queue to waiting if IO is procd
-      queueInsert(waitingQueue, runningQueue[frontRunning], &rearWaiting, &frontWaiting, &waitingSize);
-      printOutput(outputFile, time, runningQueue[frontReady], runningString, waitingString);
-      queueDelete(runningQueue, &rearRunning, &frontRunning, &runningSize);
+      queueInsert(waitingQueue, running, &rearWaiting, &frontWaiting, &waitingSize);
+      printOutput(outputFile, time, running, runningString, waitingString);
+      running = invalidRunning;
       //Set a unique ID for IO tracking
       timerIOWait[ioWaitTracker] = 0;
       waitingQueue[rearWaiting].ioTrackerID = ioWaitTracker;
@@ -279,7 +291,7 @@ int main(){
 
 
     //Increment times
-    runningQueue[frontRunning].timeRan++;
+    running.timeRan++;
     //printf("PID : %d  TIME RAN:%d\n",runningQueue[frontRunning].pid, runningQueue[frontRunning].timeRan);
     time++;
         timerIO++;
@@ -291,7 +303,7 @@ int main(){
 
 
 
-
+  end:
 
   fclose(outputFile);
   return 0;
