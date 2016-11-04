@@ -13,8 +13,8 @@ struct process{
     int ioFrequency;
     int ioDuration;
     int timeRan;
-    int readyTime;
     int ioTrackerID;
+    int waitTime;
 };
 
 
@@ -37,7 +37,7 @@ void parseInput(struct process processes[]){
   char ch;
 
   array=(int*)malloc(sizeof(int)*capacity);
-  fp=fopen("input.txt","r");
+  fp=fopen("input_IO.txt","r");
   row=col=c=count=0;
 
   while(EOF!=(inc=fscanf(fp,"%d%c", &data, &ch)) && inc == 2){
@@ -72,10 +72,10 @@ void parseInput(struct process processes[]){
       //Testing the output of parseInput
       for(i=0;i<row;++i){
           for(j=0;j<col;++j){
-              //printf("%d ", array[i*col + j]);//matrix[i][j]
+              printf("%d ", array[i*col + j]);//matrix[i][j]
           }
               numberStruct++;
-              //printf("\n");
+              printf("\n");
       }
 
 
@@ -119,21 +119,6 @@ void printProcess(struct process process){
   printf("Total CPU Time: %d \n", process.totalCPUTime);
   printf("I/O Frequency: %d \n", process.ioFrequency);
   printf("I/O Duration: %d \n \n", process.ioDuration);
-}
-
-void calculateMetrics(FILE *output, struct process endQueue[], int size, int front){
-  int throughput = 0;
-  int averageTurnaround = 0;
-  int waitTime = 0;
-  for(int i = front; i < size; i++){
-    throughput = throughput + endQueue[i].timeRan;
-    waitTime = waitTime + endQueue[i].readyTime;
-  }
-  averageTurnaround = throughput / size -1;
-  printf("\nMETRICS: \n");
-  printf("Throughput: %d \nWait Time: %d \nAverage Turnaround Time: %d \n",throughput, waitTime, averageTurnaround);
-  fprintf(output,"Throughput: %d \n Wait Time: %d \n Average Turnaround Time: %d \n",throughput, waitTime, averageTurnaround);
-
 }
 
 /*  Appends a process to a process queue
@@ -182,8 +167,8 @@ void queueDelete(struct process queue[], int *rearA, int *frontA, int *size){
   printOutput(outputFile, 3, inputProcesses[1], readyString, runningString);
 */
 void printOutput(FILE *output, long unsigned int time, struct process someProcess, char oldState[], char newState[]){
-    printf("|  %lu   |  %d   |  %s   ->  %s  | \n", time, someProcess.pid, oldState, newState );
-    fprintf(output, "|  %lu   |  %d   |  %s   ->  %s  | \n", time, someProcess.pid, oldState, newState );
+    printf("|  %lu   |  %d   |  %s   |  %s  | \n", time, someProcess.pid, oldState, newState );
+    fprintf(output, "|  %lu   |  %d   |  %s   |  %s  | \n", time, someProcess.pid, oldState, newState );
 }
 
 
@@ -193,11 +178,13 @@ int main(){
   struct process inputProcesses[MAX_PROCESSES]; //MAX NUMBER OF INPUT PROCESSES = 10
   parseInput(inputProcesses);
   //print parsed input info
+  printProcesses(inputProcesses, inputSize, 0);
 
 
   //Setting up state queues
   struct process readyQueue[MAX_PROCESSES];
   struct process running;
+  struct process waitingQueue[MAX_PROCESSES];
   struct process endQueue[MAX_PROCESSES];
   struct process invalidRunning;
   invalidRunning.pid = -1;
@@ -206,13 +193,25 @@ int main(){
 
   int rearReady = -1;
   int frontReady = -1;
+
+  int rearWaiting = -1;
+  int frontWaiting = -1;
   int rearEnd = -1;
   int frontEnd = -1;
+
+  int flag = 0;
+
+
 
   long unsigned int time = 0;
 
   int modInputSize = inputSize;
+
+  int timerIO = 0;
+  int timerIOWait[inputSize];
+  int ioWaitTracker = 0;
   int  skipRead = 0;
+  int segFlag = 0;
 
 
 
@@ -251,30 +250,80 @@ int main(){
 
     if(running.pid < 0){ //Check if there isn't a process running
 
-      if(abs(rearReady - frontReady) >= 0){ //Check if a process is in the Ready Queue
+      if(abs(rearReady - frontReady) >= 0 && readyQueue[frontReady].pid > 0){ //Check if a process is in the Ready Queue
 
+          //Set a process to run
           running = readyQueue[frontReady];
           printOutput(outputFile, time, running, readyString, runningString);
           //Remove the process from the ready Queue
           queueDelete(readyQueue, &rearReady, &frontReady, &readySize);
+          //Reset TimerIO
+          timerIO = 0;
       }
     }
 
+
+
+    //Check for I/O
+    if(running.ioFrequency == 0){
+      //NO IO
+    }
+    else if (running.ioFrequency == timerIO){
+      running.ioTrackerID = ioWaitTracker;
+      //Transfer the process from the running queue to waiting if IO is procd
+      int tempRear = rearWaiting -1;
+      queueInsert(waitingQueue, running, &tempRear, &frontWaiting, &waitingSize);
+      printOutput(outputFile, time, waitingQueue[frontWaiting], runningString, waitingString);
+      running = invalidRunning;
+      //Set a unique ID for IO tracking
+      timerIOWait[ioWaitTracker] = 0;
+      ioWaitTracker++;
+
+    }
+
+    //Iterate over all waiting processes
+
+      if(frontWaiting != -1){
+        if(flag < 6){
+          printf("frontWaiting: %d waitingSize: %d\n",frontWaiting,waitingSize );
+          flag++;
+        }
+        for (int i = frontWaiting; i < waitingSize;i++) {
+
+          //Check a process's IO is over
+          printf("Waiting process duration: %d  TIMER INFO: %d \n",waitingQueue[i].ioDuration,timerIOWait[waitingQueue[i].ioTrackerID]);
+          if(waitingQueue[i].ioDuration == timerIOWait[waitingQueue[i].ioTrackerID]){
+            //Transfer the process from the waiting queue to ready queue if IO is done
+            printf("EVER ENTER?\n" );
+            queueInsert(readyQueue, waitingQueue[i], &rearReady, &frontReady, &readySize);
+            printOutput(outputFile, time, waitingQueue[i], waitingString, readyString);
+            queueDelete(waitingQueue, &rearWaiting, &frontWaiting, &waitingSize);
+
+            timerIOWait[i] = 0;
+          }
+        }
+      }
+
+
+
+
+
+
     //Increment times
     running.timeRan++;
-    for(int i = frontReady; i < readySize; i++){
-      readyQueue[i].readyTime++;
-    }
     //printf("PID : %d  TIME RAN:%d\n",runningQueue[frontRunning].pid, runningQueue[frontRunning].timeRan);
     time++;
+        timerIO++;
+
+    //Increment all IO timers
+    for (int i = 0; frontWaiting < waitingSize;i++) {
+      timerIOWait[i]++;
+    }
   }
 
 
 
   end:
-
-  calculateMetrics(outputFile,endQueue, endSize, frontEnd);
-
 
   fclose(outputFile);
   return 0;
